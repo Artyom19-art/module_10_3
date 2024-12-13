@@ -1,45 +1,51 @@
-from random import randint
+import threading
+import random
+import time
 from threading import Thread, Lock
-from time import sleep
 
 
-class Bank:
-    def __init__(self,balance: int = 0, lock: Lock = Lock()):
-        self.balance = balance
-        self.lock = lock
 
+class Bank(Thread):
+
+    def __init__(self):
+        super().__init__()
+        self.balance = 0
+        self.lock = Lock()
+
+# 1 Поток "депозит"
     def deposit(self):
         for i in range(100):
-            transfer = randint(50,500)
-            self.balance += transfer
-            print(f'Пополнение: {transfer}. Баланс: {self.balance}')
             if self.balance >= 500 and self.lock.locked():
                 self.lock.release()
-            sleep(0.001)
+            y = random.randint(50, 500)
+            self.balance += y
+            print(f'Пополнение: {y}. Баланс: {self.balance}')
 
+            # ожидание в 0.001 секунды, имитация скорости выполнения пополнения.
+            time.sleep(0.001)
 
+# 2й поток "Брать"
     def take(self):
-        # 100 транзакций снятия средств
         for i in range(100):
-            transfer = randint(50, 500)
-            print(f'Запрос на {transfer}')
-            if transfer <= self.balance:
-                self.balance -= transfer
-                print(f'Снятие: {transfer}. Баланс: {self.balance}')
+            x = random.randint(50,500)
+            print(f'Запрос на {x}')
+            if self.balance >= x:
+                self.balance -= x
+                print(f'Снятие: {x}. Баланс: {self.balance}')
             else:
-                print('Запрос отклонён, недостаточно средств')
-                self.lock.acquire()  # не более двух отклонений запросов подряд
-            sleep(0.001)
+                print(f'Запрос отклонён, недостаточно средств')
+                self.lock.acquire()
+            time.sleep(0.001)
 
 
-if __name__ == '__main__':
-    bk = Bank()
-    th1 = Thread(target=bk.deposit)  # объект связанного метода
-    th2 = Thread(target=bk.take)  # bound (instance) method object
+bk = Bank()
 
-    th1.start()
-    th2.start()
-    th1.join()
-    th2.join()
+th1 = threading.Thread(target=Bank.deposit, args=(bk,))
+th2 = threading.Thread(target=Bank.take, args=(bk,))
 
-    print(f'Итоговый баланс: {bk.balance}')
+th1.start()
+th2.start()
+th1.join()
+th2.join()
+
+print(f'Итоговый баланс: {bk.balance}')
